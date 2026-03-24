@@ -121,23 +121,7 @@ p1 <- df_daily %>%
 # ==============================================================================
 # Graph 2: 效率缺口审计 (Opportunity Set Contraction)
 # ==============================================================================
-# [新增：Appendix II 资产效率审计逻辑]
-# 计算各资产 SR 并生成审计表 (Console 输出)
-sr_audit_summary <- asset_points %>%
-  mutate(SR = ret / vol, Regime_Temp = gsub(" ", "_", Regime)) %>%
-  select(Asset, Regime_Temp, SR) %>%
-  pivot_wider(names_from = Regime_Temp, values_from = SR, names_prefix = "SR_") %>%
-  mutate(SR_Drop = SR_High_Inflation - SR_Low_Inflation)
-
-# 计算前沿面整体效率衰减
-max_sr_low <- max(smooth_low$ret_smooth / smooth_low$vol, na.rm = TRUE)
-max_sr_high <- max(smooth_high$ret_smooth / smooth_high$vol, na.rm = TRUE)
-eff_decay_pct <- (max_sr_high / max_sr_low - 1) * 100
-
-print("--- Appendix II: Asset Efficiency Audit (Sharpe Ratio Migration) ---")
-print(sr_audit_summary)
-
-# A. 数值模拟与单调前沿线计算
+# A. 数值模拟与单调前沿线计算 (保持原样)
 get_stats <- function(data, w_vec) {
   r <- as.matrix(data[, c("ret_VOO", "ret_QQQ", "ret_VGLT")]) %*% w_vec
   data.frame(ret = mean(r) * 252, vol = sd(r) * sqrt(252))
@@ -156,7 +140,7 @@ simulate_monotonic_frontier <- function(data, n = 3000) {
 smooth_low <- simulate_monotonic_frontier(df_daily[df_daily$Regime == "Low Inflation",])
 smooth_high <- simulate_monotonic_frontier(df_daily[df_daily$Regime == "High Inflation",])
 
-# B. 效率缺口阴影 (The Gap)
+# B. 效率缺口阴影 (The Gap) (保持原样)
 common_vol <- seq(0.10, 0.25, length.out = 100)
 gap_data <- data.frame(
   vol = common_vol,
@@ -164,7 +148,7 @@ gap_data <- data.frame(
   y_high = approx(smooth_high$vol, smooth_high$ret_smooth, xout = common_vol)$y
 ) %>% drop_na()
 
-# C. 资产迁移轨迹
+# C. 资产迁移轨迹 (保持原样)
 pure_assets <- c("VOO", "QQQ", "VGLT")
 pure_weights <- list(c(1,0,0), c(0,1,0), c(0,0,1))
 asset_points <- map_df(1:3, ~{
@@ -174,6 +158,29 @@ asset_points <- map_df(1:3, ~{
 })
 trajectory_arrows <- asset_points %>% pivot_wider(names_from = Regime, values_from = c(ret, vol)) %>%
   rename(x_start = `vol_Low Inflation`, y_start = `ret_Low Inflation`, x_end = `vol_High Inflation`, y_end = `ret_High Inflation`)
+
+# --- 【关键：把计算块放在这里！！！】 ---
+# 因为到这一行，asset_points 和 smooth_high 已经全部生成完毕了
+
+# 1. 计算各资产 SR
+asset_points <- asset_points %>% mutate(SR = ret / vol)
+
+# 2. 计算前沿面最高 SR
+max_sr_low <- max(smooth_low$ret_smooth / smooth_low$vol, na.rm = TRUE)
+max_sr_high <- max(smooth_high$ret_smooth / smooth_high$vol, na.rm = TRUE)
+
+# 3. 计算衰减百分比
+eff_decay_pct <- (max_sr_high / max_sr_low - 1) * 100
+
+# 4. 生成审计汇总表
+sr_audit_summary <- asset_points %>%
+  mutate(Regime_Temp = gsub(" ", "_", Regime)) %>% 
+  select(Asset, Regime_Temp, SR) %>%
+  pivot_wider(names_from = Regime_Temp, values_from = SR, names_prefix = "SR_") %>%
+  mutate(SR_Drop = SR_High_Inflation - SR_Low_Inflation)
+
+print("--- Appendix II: Asset Efficiency Audit (Sharpe Ratio) ---")
+print(sr_audit_summary)
 
 # D. 绘图
 p2 <- ggplot() +
