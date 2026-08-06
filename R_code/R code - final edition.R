@@ -29,12 +29,12 @@ clean_local_data <- function(file_path, name) {
     select(Date, !!paste0("ret_", name) := ret) %>% drop_na()
 }
 
-voo_ret <- clean_local_data("VOO ETF Stock Price History.csv", "VOO")
-qqq_ret <- clean_local_data("QQQ ETF Stock Price History.csv", "QQQ")
-vglt_ret <- clean_local_data("VGLT ETF Stock Price History.csv", "VGLT")
+voo_ret <- clean_local_data("../raw_data/VOO ETF Stock Price History.csv", "VOO")
+qqq_ret <- clean_local_data("../raw_data/QQQ ETF Stock Price History.csv", "QQQ")
+vglt_ret <- clean_local_data("../raw_data/VGLT ETF Stock Price History.csv", "VGLT")
 
 # 读取 Sticky CPI 数据 (基于你的 observation_date / CORESTICKM159SFRBATL 格式)
-inflation_raw <- read_csv("cpi.csv") %>%
+inflation_raw <- read_csv("../raw_data/cpi.csv") %>%
   rename(Date = observation_date, inf_percent = CORESTICKM159SFRBATL) %>%
   mutate(Date = mdy(Date), inf_yoy = inf_percent / 100) %>% select(Date, inf_yoy)
 
