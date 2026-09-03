@@ -25,7 +25,7 @@ clean_local_data <- function(file_path, name) {
     select(Date, Price) %>%
     mutate(Date = mdy(Date), Price = as.numeric(gsub(",", "", Price))) %>%
     arrange(Date) %>%
-    mutate(ret = log(Price / lag(Price))) %>% 
+    mutate(ret = Price / lag(Price) - 1) %>% 
     select(Date, !!paste0("ret_", name) := ret) %>% drop_na()
 }
 
@@ -222,16 +222,16 @@ cum_matrix <- data.frame(
   Date = df_strat_data$Date,
   `Pure Equity (VOO)` = cumprod(1 + df_strat_data$ret_VOO) * 1000,
   `Pure Bond (VGLT)` = cumprod(1 + df_strat_data$ret_VGLT) * 1000,
-  `Balanced Static (60/40)` = cumprod(1 + (df_strat_data$ret_VOO/3 + df_strat_data$ret_QQQ/3 + df_strat_data$ret_VGLT/3)) * 1000,
+  `Balanced Static (1/3 Each)` = cumprod(1 + (df_strat_data$ret_VOO/3 + df_strat_data$ret_QQQ/3 + df_strat_data$ret_VGLT/3)) * 1000,
   `Dynamic Tactical Strategy` = cumprod(1 + df_strat_data$Dynamic_Ret) * 1000,
   check.names = FALSE
 ) %>% pivot_longer(cols = -Date, names_to = "Strategy", values_to = "Value") %>%
-  mutate(Strategy = factor(Strategy, levels = c("Dynamic Tactical Strategy", "Balanced Static (60/40)", "Pure Equity (VOO)", "Pure Bond (VGLT)")))
+  mutate(Strategy = factor(Strategy, levels = c("Dynamic Tactical Strategy", "Balanced Static (1/3 Each)", "Pure Equity (VOO)", "Pure Bond (VGLT)")))
 
 p3 <- ggplot(cum_matrix, aes(x = Date, y = Value, color = Strategy)) +
   geom_line(aes(size = Strategy == "Dynamic Tactical Strategy"), alpha = 0.9) +
   scale_size_manual(values = c("TRUE" = 1.3, "FALSE" = 0.7), guide = "none") +
-  scale_color_manual(values = c("Dynamic Tactical Strategy" = "#006633", "Balanced Static (60/40)" = "#6699CC", "Pure Equity (VOO)" = "gray60", "Pure Bond (VGLT)" = "#CC3333")) +
+  scale_color_manual(values = c("Dynamic Tactical Strategy" = "#006633", "Balanced Static (1/3 Each)" = "#6699CC", "Pure Equity (VOO)" = "gray60", "Pure Bond (VGLT)" = "#CC3333")) +
   scale_y_continuous(labels = dollar_format(accuracy = 1), position = "right") +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y", expand = c(0, 0)) +
   labs(title = "Graph 3: Strategic Capital Preservation: Tactical vs. Static",
